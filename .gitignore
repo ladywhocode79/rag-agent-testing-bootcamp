@@ -61,5 +61,5 @@ chroma_db/
 Thumbs.db
 
 # Project-specific
-course-book/
+
 *.log
