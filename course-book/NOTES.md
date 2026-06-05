@@ -127,6 +127,23 @@ ProblemMetric that catches itFixRetriever pulls irrelevant chunksLow PrecisionSm
 Q4 has a precision problem, not a recall problem. The relevant content was found — it just had noise mixed in.
 Q5 from Day 1 was the opposite — recall was the real failure there because Samsung dominated and Sony/LG chunks were never retrieved at all.
 
+## Day 4 Hallucination detection
 
+Hallucination is related but catches something different. Here's the distinction in one line each:
+Faithfulness — did the answer use the retrieved context?
+Hallucination — did the answer contradict or go beyond the retrieved context?
+An answer can be faithful but still hallucinate. Example:
+Context   : "Clean with a soft dry cloth."
+Answer    : "Clean with a soft dry cloth. You can also use warm water."
+Faithful — yes, it used the context. Hallucination — yes, it added "warm water" which was never in the context.
+Faithfulness checks inclusion. Hallucination checks invention. You need both.
 
+What HallucinationMetric actually measures:
+Score 0.0 = no hallucination = answer aligns with context = PASS
+Score 1.0 = hallucination detected = answer contradicts context = FAIL
 
+## Imp notes for Hallucination
+HallucinationMetric 0.0 = no hallucination = PASS, 1.0 = contradiction detected = FAIL
+The metric detects contradiction between answer and context — it does not decide which one is truthful
+In production, retriever quality directly determines how reliable this metric is
+This confirms the lesson from earlier:the metric is only as reliable as the context you feed it. In production your context comes from your retriever — so a bad retriever producing wrong chunks will cause good answers to fail this metric.
