@@ -106,3 +106,27 @@ Mapped to what you already saw on Day 1:
 Q4 first run — retriever pulled safety warning pages instead of the troubleshooting table → low precision (noisy chunks)
 Q5 — retriever missed Sony and LG chunks entirely → low recall (missing relevant content)
 
+## Day notes
+Precision = retriever noise problem
+Recall = retriever missing problem
+High scores on Relevancy and Faithfulness with low Precision means: good answer, bad retriever
+You can have perfect Recall and still have low Precision — they are independent
+
+## some observations at Day 3
+Your prediction was right — precision is lower for Q4 than Q1. But not as low as expected. Here's why that's interesting.
+0.83 is not a failure, but read the reason carefully.
+The judge is telling you exactly what happened: the two relevant chunks landed at positions 1 and 3, but an irrelevant safety warning chunk slipped into position 2. Precision penalises that because in an ideal retriever all relevant chunks come first, then all irrelevant ones. One noisy chunk in the middle dropped you from 1.00 to 0.83.
+This maps directly to what you saw on Day 1 — that safety warning page from page 3 kept showing up in Q4 results even though it had nothing to do with TV shutdown troubleshooting.
+
+Recall is 1.00, not low.
+Here's why. Recall measures whether the retriever found all the relevant chunks that exist. For Q4 the two relevant chunks — the power settings chunk and the auto-off chunk — were both retrieved. All expected content was found. So recall is perfect.
+What was low was precision — a noisy chunk slipped in at position 2.
+This is a critical distinction to lock in:
+Precision and Recall fail for different reasons and point to different fixes:
+ProblemMetric that catches itFixRetriever pulls irrelevant chunksLow PrecisionSmaller chunk size, better embeddingsRetriever misses relevant chunksLow RecallLarger k, better chunking strategy
+Q4 has a precision problem, not a recall problem. The relevant content was found — it just had noise mixed in.
+Q5 from Day 1 was the opposite — recall was the real failure there because Samsung dominated and Sony/LG chunks were never retrieved at all.
+
+
+
+
