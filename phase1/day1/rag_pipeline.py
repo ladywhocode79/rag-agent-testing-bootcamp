@@ -1,4 +1,5 @@
 import os
+import shutil
 from dotenv import load_dotenv
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -33,17 +34,18 @@ def chunk_documents(docs):
 
 # ── 3. EMBED + STORE (local, no API key needed) ───────────
 def build_vectorstore(chunks):
-    # Using a free local embedding model — no OpenAI key needed
-    embeddings = HuggingFaceEmbeddings(
-        model_name="all-MiniLM-L6-v2",
-        model_kwargs={"device": "cpu"}
-    )
+    db_path = "phase1/day1/chroma_db"
+    
+    # wipe existing db so vectors don't stack up on re-runs
+    if os.path.exists(db_path):
+        shutil.rmtree(db_path)
+    
+    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
     vectorstore = Chroma.from_documents(
         documents=chunks,
         embedding=embeddings,
-        persist_directory="./phase1/day1/chroma_db"
+        persist_directory=db_path
     )
-    print(f"Stored {vectorstore._collection.count()} vectors in ChromaDB")
     return vectorstore
 
 # ── 4. QUERY ──────────────────────────────────────────────

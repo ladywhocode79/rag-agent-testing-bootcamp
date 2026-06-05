@@ -33,11 +33,76 @@ Source imbalance                Q5 first two runs, fixed by per-source retrieval
 
 ## Also Add these definitions
 As you read, watch, and build — write your own definitions for: 
-RAG, 
-chunk, 
-embedding, 
-vector store, 
-retriever, 
-context window, 
-hallucination (in RAG context)
+RAG: Reterival Augemented Generation is a process/setup wherein with LLM's are provided supporting lates documents / references , so that agents can relevant and updated answers .
+
+chunk : Documents/Data are divided into small chunks before saving into vector db for quick rterival by agents."Too small and you lose context (a sentence without its paragraph). Too large and retrieval becomes imprecise (too many topics in one chunk)." 
+
+embedding : Embedding converts text into a list of numbers (a vector) where similar meanings produce similar numbers, enabling similarity search instead of keyword matching.
+
+vector store : A database that stores embeddings and retrieves the most similar ones to a given query using similarity scoring (e.g. cosine similarity).
+retriever: Takes the user's question, embeds it, searches the vector store for the closest chunks, and passes those chunks as context to the LLM.
+context window:The maximum amount of text (question + retrieved chunks + answer) an LLM can process in a single call. If retrieved chunks are too large or too many, they won't fit.
+
+hallucination (in RAG context): When the LLM generates an answer not supported by the retrieved chunks — either because no relevant chunk was found, or because the LLM ignored the context and invented a plausible-sounding but incorrect answer.
+
+
+## Day 2 — DeepEval basics: AnswerRelevancy + Faithfulness
+
+Q1. What AnswerRelevancy measures in one sentence
+Measures how directly and completely the answer addresses the question asked.
+
+Q2. What Faithfulness measures in one sentence
+Measures whether the answer is grounded in the retrieved chunks, with no claims added beyond what the context contains.
+
+Q3. Why 1.00 on both doesn't mean the whole pipeline is perfect (hint: think about Q2 and Q5 from Day 1)
+High scores on AnswerRelevancy and Faithfulness do not mean your pipeline is correct. They only mean the answer was on-topic and grounded in whatever was retrieved. If the wrong document was retrieved, or a document was missing entirely, the metrics still pass — and you'd never know.
+This is why retrieval metrics (Contextual Precision and Recall) exist 
+
+## Some more questions from Day2
+Q1. What is an LLMTestCase and what 4 things does it hold?
+It's a container — exactly like a test case in any QA framework. It holds 4 things:
+input            → the question you asked
+actual_output    → what your RAG pipeline returned
+expected_output  → what a correct answer looks like
+retrieval_context → the chunks that were retrieved
+
+Q2. What is the difference between a metric and a threshold?
+A metric is the measurement — AnswerRelevancyMetric scores 0.0 to 1.0.
+A threshold is your pass/fail line — you set threshold=0.7, so anything below 0.7 fails.
+Exactly like this in traditional testing:
+response_time = measure()        # metric
+assert response_time < 2000      # threshold
+
+Q3. Why does DeepEval use another LLM as the judge instead of checking the answer directly?
+
+Because you can't use == on a sentence. These two answers are both correct but would fail an exact match:
+Expected : "Wipe with a soft dry cloth"
+Actual   : "Use a dry soft cloth to clean the surface"
+So instead you ask Claude: "Does this answer correctly address the question? Score it 0 to 1." That's the entire idea behind LLM-as-judge.
+
+4.so is deepEval is all about LLM as a judege?
+Mostly yes, but not entirely. DeepEval has three types of checks:
+
+1. LLM-as-judge (most metrics)
+AnswerRelevancy, Faithfulness, Contextual Precision, Hallucination — all of these use an LLM to score the output. This is the core of DeepEval and what you'll use 80% of the time.
+2. Non-LLM checks (deterministic)
+Some metrics don't need an LLM at all — they check things mechanically:
+
+    Does the output contain a specific keyword?
+    Is the output under a certain length?
+    Does it match a regex pattern?
+
+These are fast, cheap, and 100% deterministic. Useful for basic guardrails.
+3. Statistical similarity
+Compares outputs using embedding similarity scores rather than an LLM judge. Faster than LLM-as-judge but less nuanced.
+
+## Day 3 Contextual Precision and Recall.
+Contextual Precision — of the chunks retrieved, how many were actually useful for answering the question? If you retrieved 9 chunks and only 2 were relevant, precision is low. This is your retriever being noisy.
+
+Contextual Recall — of all the useful chunks that exist in the documents, how many did the retriever actually find? If 5 relevant chunks exist but you only retrieved 2, recall is low. This is your retriever missing things.
+
+Mapped to what you already saw on Day 1:
+
+Q4 first run — retriever pulled safety warning pages instead of the troubleshooting table → low precision (noisy chunks)
+Q5 — retriever missed Sony and LG chunks entirely → low recall (missing relevant content)
 
