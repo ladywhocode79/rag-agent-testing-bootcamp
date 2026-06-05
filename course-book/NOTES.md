@@ -173,3 +173,28 @@ Two things to understand why:
 Why Q5 passed Recall: Your expected output for Q5 mentions Samsung charging rules, temperature range, and Sony's red flash. The per-source retrieval fix you built on Day 1 ensured chunks from all 3 documents were retrieved. So the judge found support for all expected sentences in the context — Recall passed.
 
 Why Q4 Faithfulness scored 0.80: This is the most interesting result in the whole run. The judge caught a subtle issue — your pipeline described the auto-off as something in "time settings" but the manual says it triggers automatically after 15 minutes without input. That's a real faithfulness gap — the answer slightly misrepresented the mechanism. It still passed at 0.7 threshold, but it's a genuine finding worth noting.
+
+## Day 6 — Threshold tuning and score analysis
+
+You have been running all tests at threshold 0.7. But how do you know 0.7 is the right threshold for your pipeline?
+In traditional testing a pass/fail is binary — either the button works or it doesn't. In LLM testing the line is movable. Setting it too low means bad answers pass. Setting it too high means good answers fail. Day 6 is about understanding where your pipeline actually sits and making a conscious decision about what threshold is appropriate.
+
+Then answer these two questions in your NOTES.md before coming back:
+
+Which question and metric combination is borderline — passes at 0.7 but fails at 0.9? What does that tell you about that part of your pipeline?
+Your explanation is correct — it is a ranking/prioritisation problem, not a missing content problem. The relevant chunks were retrieved but noisy chunks appeared between them, pushing the score below 0.9. Well understood.
+One thing to add to your notes: this is a retriever quality issue, not an LLM quality issue. The LLM answered correctly — the retriever just didn't rank cleanly enough to hit 0.9.
+
+Q2 — Contextual Recall for Q5
+Correct. Not all relevant chunks were retrieved — specifically cross-document content. You already know the root cause: source imbalance. The per-source fix helped but wasn't perfect.
+
+If this were a production healthcare chatbot giving medication instructions, would you set threshold at 0.5, 0.7, or 0.9 — and why?
+
+0.9 is the right answer and your reasoning is correct. In a domain where a wrong answer causes patient harm, you want the bar high. A medication chatbot scoring 0.83 on ContextualPrecision means noisy chunks are influencing the answer — that is unacceptable when the stakes are a dosage instruction.
+
+## Imp notes
+Pipeline weakest point: ContextualPrecision — noisy chunk ranking
+All other metrics hit 0.9 cleanly — answer quality and faithfulness are strong
+Production threshold decision depends on domain risk — healthcare = 0.9, general FAQ = 0.7
+
+
