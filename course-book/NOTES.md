@@ -147,3 +147,29 @@ HallucinationMetric 0.0 = no hallucination = PASS, 1.0 = contradiction detected 
 The metric detects contradiction between answer and context — it does not decide which one is truthful
 In production, retriever quality directly determines how reliable this metric is
 This confirms the lesson from earlier:the metric is only as reliable as the context you feed it. In production your context comes from your retriever — so a bad retriever producing wrong chunks will cause good answers to fail this metric.
+
+## Day 5 Pytest integration and test report
+Day 5 is just wiring everything you built on Days 2, 3, and 4 into a single proper test file with fixtures, parametrize, and a clean summary at the end.
+The only new idea today is fixtures for DeepEval — instead of rebuilding the vectorstore inside every test function, you build it once and share it across all tests. Same principle as a @pytest.fixture you already know from API or UI testing.
+
+scope="session" on the fixtures means the vectorstore is built once for the entire test session, not once per test. Without this, your pipeline rebuilds and re-embeds all PDFs for every single test function — 10 tests would rebuild 10 times. With it, it builds once and all tests share the same instance.
+ids=[d["id"] for d in test_data] gives your tests readable names in the output — test_answer_relevancy[Q1] instead of test_answer_relevancy[item0].
+
+What this suite has now proven across 4 days:
+Metric.               Purpose.                     Caught real issue?
+AnswerRelevancy.      Answer on-topic?             Q5 slightly off (0.86)
+Faithfulness.         Answer grounded in context?  Q4 slight drift (0.80)
+ContextualPrecision   Noisy chunks?                Q4 noise at position 2 (Day 3)
+ContextualRecall.     Missing chunks?              Fixed by per-source retrieval
+Hallucination.        Answer contradicts context?  Caught fake context correctly
+
+## Imp notes of Day5
+
+scope="session" fixture builds vectorstore once — critical for performance
+16/16 passed but 0.80 and 0.86 scores are warnings worth investigating in production
+Passing all tests at threshold 0.7 does not mean the pipeline is perfect
+
+Two things to understand why:
+Why Q5 passed Recall: Your expected output for Q5 mentions Samsung charging rules, temperature range, and Sony's red flash. The per-source retrieval fix you built on Day 1 ensured chunks from all 3 documents were retrieved. So the judge found support for all expected sentences in the context — Recall passed.
+
+Why Q4 Faithfulness scored 0.80: This is the most interesting result in the whole run. The judge caught a subtle issue — your pipeline described the auto-off as something in "time settings" but the manual says it triggers automatically after 15 minutes without input. That's a real faithfulness gap — the answer slightly misrepresented the mechanism. It still passed at 0.7 threshold, but it's a genuine finding worth noting.

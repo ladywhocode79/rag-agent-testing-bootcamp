@@ -88,43 +88,65 @@ def build_test_case(vectorstore, item):
 
 # ── TESTS ─────────────────────────────────────────────────
 @pytest.mark.parametrize("item", test_data, ids=[d["id"] for d in test_data])
-def test_answer_relevancy(vectorstore, judge, item):
+def test_answer_relevancy(vectorstore, judge, item, capsys):
     tc     = build_test_case(vectorstore, item)
     metric = AnswerRelevancyMetric(threshold=0.7, model=judge, include_reason=True)
     metric.measure(tc)
-    print(f"\n[{item['id']}] AnswerRelevancy: {metric.score:.2f} — {metric.reason}")
-    assert metric.success, f"[{item['id']}] AnswerRelevancy failed: {metric.score:.2f}"
+    output = f"[{item['id']}] AnswerRelevancy: {metric.score:.2f} — {metric.reason}"
+    print(output, flush=True)
+    assert metric.success, output
 
 @pytest.mark.parametrize("item", test_data, ids=[d["id"] for d in test_data])
-def test_faithfulness(vectorstore, judge, item):
+def test_faithfulness(vectorstore, judge, item, capsys):
     tc     = build_test_case(vectorstore, item)
     metric = FaithfulnessMetric(threshold=0.7, model=judge, include_reason=True)
     metric.measure(tc)
-    print(f"\n[{item['id']}] Faithfulness: {metric.score:.2f} — {metric.reason}")
-    assert metric.success, f"[{item['id']}] Faithfulness failed: {metric.score:.2f}"
+    output = f"[{item['id']}] Faithfulness: {metric.score:.2f} — {metric.reason}"
+    print(output, flush=True)
+    assert metric.success, output
 
 @pytest.mark.parametrize("item", test_data, ids=[d["id"] for d in test_data])
-def test_hallucination(vectorstore, judge, item):
+def test_hallucination(vectorstore, judge, item, capsys):
     tc = build_test_case(vectorstore, item)
     metric = HallucinationMetric(threshold=0.5, model=judge, include_reason=True)
     metric.measure(tc)
-
     item_id = item["id"]
-    print(f"\n[{item_id}] Hallucination: {metric.score:.2f} — {metric.reason}")
-    assert metric.score < metric.threshold, f"[{item_id}] Hallucination detected: {metric.score:.2f}"
+    output = f"[{item_id}] Hallucination: {metric.score:.2f} — {metric.reason}"
+    print(output, flush=True)
+    assert metric.score < metric.threshold, output
 
 @pytest.mark.parametrize("item", test_data, ids=[d["id"] for d in test_data])
-def test_contextual_recall(vectorstore, judge, item):
+def test_contextual_recall(vectorstore, judge, item, capsys):
     tc     = build_test_case(vectorstore, item)
     metric = ContextualRecallMetric(threshold=0.7, model=judge, include_reason=True)
     metric.measure(tc)
-    print(f"\n[{item['id']}] ContextualRecall: {metric.score:.2f} — {metric.reason}")
-    assert metric.success, f"[{item['id']}] ContextualRecall failed: {metric.score:.2f}"
+    output = f"[{item['id']}] ContextualRecall: {metric.score:.2f} — {metric.reason}"
+    print(output, flush=True)
+    assert metric.success, output
 
-# @pytest.mark.parametrize("item", test_data, ids=[d["id"] for d in test_data])
-# def test_hallucination(vectorstore, judge, item):
-#     tc     = build_test_case(vectorstore, item)
-#     metric = HallucinationMetric(threshold=0.5, model=judge, include_reason=True)
-#     metric.measure(tc)
-#     print(f"\n[{item['id']}] Hallucination: {metric.score:.2f} — {metric.reason}")
-#     assert metric.score < metric.threshold, f"[{item['id']}] Hallucination detected: {metric.score:.2f}"
+def test_summary_report(vectorstore, judge):
+    """Generate comprehensive HTML report with all metrics"""
+    print("\n" + "="*80)
+    print("RAG PIPELINE EVALUATION SUMMARY")
+    print("="*80)
+
+    for item in test_data:
+        tc = build_test_case(vectorstore, item)
+        print(f"\n[{item['id']}] {item['question']}")
+        print("-" * 80)
+
+        metrics = [
+            ("AnswerRelevancy", AnswerRelevancyMetric(threshold=0.7, model=judge, include_reason=True)),
+            ("Faithfulness", FaithfulnessMetric(threshold=0.7, model=judge, include_reason=True)),
+            ("Hallucination", HallucinationMetric(threshold=0.5, model=judge, include_reason=True)),
+            ("ContextualRecall", ContextualRecallMetric(threshold=0.7, model=judge, include_reason=True)),
+        ]
+
+        for metric_name, metric in metrics:
+            metric.measure(tc)
+            status = "✓ PASS" if metric.success else "✗ FAIL"
+            print(f"{metric_name:20s}: {metric.score:.2f} — {status}")
+            print(f"  Reason: {metric.reason}\n")
+
+    print("="*80)
+
